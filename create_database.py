@@ -21,14 +21,10 @@ openai.api_key = os.environ['OPENAI_API_KEY']
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("data_subfolder", nargs='?', type=str, help="Subfolder for source data and db prefix.")
+    parser.add_argument("-s", "--source", type=str, help="Subfolder for source data and db prefix.")
     args = parser.parse_args()
-    if not args.data_subfolder:
-        CHROMA_PATH = "chroma"
-        DATA_PATH = "data/books"
-    else:
-        CHROMA_PATH = f"chroma_{args.data_subfolder}"
-        DATA_PATH = f"data/{args.data_subfolder}"
+    CHROMA_PATH = f"chroma_{args.source}"
+    DATA_PATH = f"data/{args.source}"
 
     documents = load_documents(DATA_PATH)
     chunks = split_text(documents)
