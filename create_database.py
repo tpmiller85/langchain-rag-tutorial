@@ -1,3 +1,4 @@
+import argparse
 # from langchain.document_loaders import DirectoryLoader
 from langchain_community.document_loaders import DirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -17,30 +18,33 @@ load_dotenv()
 # your .env file.
 openai.api_key = os.environ['OPENAI_API_KEY']
 
-CHROMA_PATH = "chroma"
-DATA_PATH = "data/books"
-
 
 def main():
-    generate_data_store()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("data_subfolder", nargs='?', type=str, help="Subfolder for source data and db prefix.")
+    args = parser.parse_args()
+    if not args.data_subfolder:
+        CHROMA_PATH = "chroma"
+        DATA_PATH = "data/books"
+    else:
+        CHROMA_PATH = f"chroma_{args.data_subfolder}"
+        DATA_PATH = f"data/{args.data_subfolder}"
 
-
-def generate_data_store():
-    documents = load_documents()
+    documents = load_documents(DATA_PATH)
     chunks = split_text(documents)
-    save_to_chroma(chunks)
+    save_to_chroma(CHROMA_PATH, chunks)
 
 
-def load_documents():
-    loader = DirectoryLoader(DATA_PATH, glob="*.md")
+def load_documents(data_path: str):
+    loader = DirectoryLoader(data_path, glob="*.md")
     documents = loader.load()
     return documents
 
 
 def split_text(documents: list[Document]):
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=300,
-        chunk_overlap=100,
+        chunk_size=600,
+        chunk_overlap=150,
         length_function=len,
         add_start_index=True,
     )
@@ -54,17 +58,17 @@ def split_text(documents: list[Document]):
     return chunks
 
 
-def save_to_chroma(chunks: list[Document]):
+def save_to_chroma(chroma_path: str, chunks: list[Document]):
     # Clear out the database first.
-    if os.path.exists(CHROMA_PATH):
-        shutil.rmtree(CHROMA_PATH)
+    if os.path.exists(chroma_path):
+        shutil.rmtree(chroma_path)
 
     # Create a new DB from the documents.
     db = Chroma.from_documents(
-        chunks, OpenAIEmbeddings(), persist_directory=CHROMA_PATH
+        chunks, OpenAIEmbeddings(), persist_directory=chroma_path
     )
     db.persist()
-    print(f"Saved {len(chunks)} chunks to {CHROMA_PATH}.")
+    print(f"Saved {len(chunks)} chunks to {chroma_path}.")
 
 
 if __name__ == "__main__":
